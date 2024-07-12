@@ -1,1 +1,1 @@
-# ProjectManager
+ProjectManager is a Go application designed to streamline project and task management. It leverages the power of Gin for efficient HTTP routing and GORM for robust PostgreSQL database interactions. The application sets up a main entryway, connects to the database, and sets up routes for project and task operations, all while listening on port 8080 for requests.
