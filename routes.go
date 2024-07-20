@@ -7,30 +7,32 @@ import (
 	"yourapp/controllers"
 )
 
-func init() {
+func loadEnvVariables() {
 	if err := godotenv.Load(); err != nil {
-		panic("No .env file found")
+		panic("Failed to load .env file")
 	}
 }
 
 func main() {
-	router := gin.Default()
+	loadEnvVariables()
 
-	router.POST("/projects", controllers.CreateProject)
-	router.GET("/projects/:id", controllers.GetProject)
-	router.GET("/projects", controllers.GetAllProjects)
-	router.PUT("/projects/:id", controllers.UpdateProject)
-	router.DELETE("/projects/:id", controllers.DeleteProject)
+	apiRouter := gin.Default()
 
-	router.POST("/tasks", controllers.CreateTask)
-	router.GET("/tasks/:id", controllers.GetTask)
-	router.GET("/tasks", controllers.GetAllTasks)
-	router.PUT("/tasks/:id", controllers.UpdateTask)
-	router.DELETE("/tasks/:id", controllers.DeleteTask)
+	apiRouter.POST("/projects", controllers.CreateProject)
+	apiRouter.GET("/projects/:id", controllers.GetProjectByID)
+	apiRouter.GET("/projects", controllers.ListAllProjects)
+	apiRouter.PUT("/projects/:id", controllers.UpdateProjectByID)
+	apiRouter.DELETE("/projects/:id", controllers.DeleteProjectByID)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	apiRouter.POST("/tasks", controllers.CreateTask)
+	apiRouter.GET("/tasks/:id", controllers.GetTaskByID)
+	apiRouter.GET("/tasks", controllers.ListAllTasks)
+	apiRouter.PUT("/tasks/:id", controllers.UpdateTaskByID)
+	apiRouter.DELETE("/tasks/:id", controllers.DeleteTaskByID)
+
+	serverPort := os.Getenv("PORT")
+	if serverPort == "" {
+		serverPort = "8080"
 	}
-	router.Run(":" + port)
+	apiRouter.Run(":" + serverPort)
 }
