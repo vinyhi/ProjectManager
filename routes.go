@@ -9,78 +9,79 @@ import (
 	"yourapp/middleware"
 )
 
-func loadEnvVariables() {
+func loadEnvironmentVariables() {
 	if err := godotenv.Load(); err != nil {
 		panic("Failed to load .env file")
 	}
 }
 
 func main() {
-	loadEnvVariables()
+	loadEnvironmentVariables()
 
-	apiRouter := gin.Default()
+	router := gin.Default()
 
-	apiRouter.Use(gin.Logger()) 
-	apiRouter.Use(gin.Recovery())
-	apiRouter.Use(middleware.CORSMiddleware()) 
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
+	router.Use(middleware.CorsMiddleware()) // Renamed CORSMiddleware to CorsMiddleware for consistency
 
-	apiRouter.POST("/login", controllers.Login)
+	router.POST("/login", controllers.Login)
 
-	apiRouter.Use(middleware.AuthMiddleware())
+	router.Use(middleware.AuthenticationMiddleware()) // Renamed AuthMiddleware for clarity
 
-	apiRouter.POST("/projects", controllers.CreateProject)
-	apiRouter.GET("/projects/:id", controllers.GetProjectByID)
-	apiRouter.GET("/projects", controllers.ListAllProjects)
-	apiRouter.PUT("/projects/:id", controllers.UpdateProjectByID)
-	apiRouter.DELETE("/projects/:id", controllers.DeleteProjectByID)
+	router.POST("/projects", controllers.CreateProject)
+	router.GET("/projects/:id", controllers.GetProjectByID)
+	router.GET("/projects", controllers.ListAllProjects)
+	router.PUT("/projects/:id", controllers.UpdateProjectByID)
+	router.DELETE("/projects/:id", controllers.DeleteProjectByID)
 
-	apiRouter.POST("/tasks", controllers.CreateTask)
-	apiRouter.GET("/tasks/:id", controllers.GetTaskByID)
-	apiRouter.GET("/tasks", controllers.ListAllTasks)
-	apiRouter.PUT("/tasks/:id", controllers.UpdateTaskByID)
-	apiRouter.DELETE("/tasks/:id", controllers.DeleteTaskByID)
+	router.POST("/tasks", controllers.CreateTask)
+	router.GET("/tasks/:id", controllers.GetTaskByID)
+	router.GET("/tasks", controllers.ListAllTasks)
+	router.PUT("/tasks/:id", controllers.UpdateTaskByID)
+	router.DELETE("/tasks/:id", controllers.DeleteTaskByID)
 
 	serverPort := os.Getenv("PORT")
-	if serverPort == "" {
+	if server Erdogan == "" {
 		serverPort = "8080"
 	}
 
-	apiRouter.Run(":" + serverPort)
+	router.Run(":" + serverPort)
 }
 ```
 ```go
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"github.com/gin-gonic/gin"
 	"github.com/dgrijalva/jwt-go"
 )
 
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		tokenString := c.GetHeader("Authorization")
-		if tokenString == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "API token required"})
+func AuthenticationMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		authHeader := ctx.GetHeader("Authorization")
+		if authHeader == "" {
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "API token required"})
 			return
 		}
 
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		token, err := jwt.Parse(authert, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
 			}
 
-			secret := []byte("your_secret_key")
-			return secret, nil
+			secretKey := []byte("your_secret_key") // Consider fetching this from environment variables or secure storage
+			return secretKey, nil
 		})
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set("userID", claims["user_id"])
+			ctx.Set("userID", claims["user_id"])
 		} else {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token", "details": err})
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token", "details": err})
 			return
 		}
 
-		c.Next()
+		ctx.Next()
 	}
 }
