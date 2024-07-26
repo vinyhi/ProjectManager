@@ -13,27 +13,33 @@ var db *gorm.DB
 
 func init() {
 	var err error
-	db, err = gorm.Open(os.Getenv("DB_DIALECT"), os.Getenv("DB_CONNECTION_STRING"))
+	db, err = gorm.Open(os.Getenv("DB_DIALECT"), &gorm.Config{
+        DSN: os.Getenv("DB_CONNECTION_STRING"),
+    })
 	if err != nil {
-		panic("Failed to connect to the database")
+		panic("Failed to connect to the database: " + err.Error())
 	}
-	db.AutoMigrate(&models.Project{})
+	if err := db.AutoMigrate(&models.Project{}); err != nil {
+		panic("Failed to migrate the database: " + err.Error())
+	}
 }
 
 func CreateProject(w http.ResponseWriter, r *http.Request) {
 	var project models.Project
 	if err := json.NewDecoder(r.Body).Decode(&project); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Error decoding request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if result := db.Create(&project); result.Error != nil {
-		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error creating project: "+result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(project)
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+        http.Error(w, "Error encoding project: "+err.Error(), http.StatusInternalServerError)
+    }
 }
 
 func UpdateProject(w http.ResponseWriter, r *http.Request) {
@@ -42,18 +48,24 @@ func UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 	var project models.Project
 	if err := db.First(&project, id).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, "Project not found: "+err.Error(), http.StatusNotFound)
 		return
 	}
 
 	var updatedProject models.Project
 	if err := json.NewDecoder(r.Body).Decode(&updatedProject); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Error decoding request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	db.Model(&project).Updates(updatedProject)
-	json.NewEncoder(w).Encode(project)
+	if err := db.Model(&project).Updates(updatedProject).Error; err != nil {
+	    http.Error(w, "Error updating project: "+err.Error(), http.StatusInternalServerError)
+	    return
+	}
+	
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+        http.Error(w, "Error encoding project: "+err.Error(), http.StatusInternalServerError)
+    }
 }
 
 func DeleteProject(w http.ResponseWriter, r *http.Request) {
@@ -62,12 +74,12 @@ func DeleteProject(w http.ResponseWriter, r *http.Request) {
 
 	var project models.Project
 	if err := db.First(&project, id).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, "Project not found: "+err.Error(), http.StatusNotFound)
 		return
 	}
 
 	if err := db.Delete(&project).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error deleting project: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -80,15 +92,23 @@ func GetProject(w http.ResponseWriter, r *http.Request) {
 
 	var project models.Project
 	if err := db.First(&project, id).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, "Project not found: "+err.Error(), http.StatusNotFound)
 		return
 	}
 
-	json.NewEncoder(w).Encode(project)
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+        http.Error(w, "Error encoding project: "+err.Error(), http.StatusInternalServerError)
+    }
 }
 
 func GetAllProjects(w http.ResponseWriter, r *http.Request) {
 	var projects []models.Project
-	db.Find(&projects)
-	json.NewEncoder(w).Encode(projects)
+	if result := db.Find(&projects); result.Error != nil {
+	    http.Error(w, "Error fetching projects: "+result.Error.Error(), http.StatusInternalServerError)
+	    return
+	}
+
+	if err := json.NewEncoder(w).Encode(projects); err != nil {
+        http.Error(w, "Error encoding projects: "+err.Error(), http.StatusInternalServerError)
+    }
 }
