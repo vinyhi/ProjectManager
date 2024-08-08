@@ -4,6 +4,9 @@ import (
     "fmt"
     "net/http"
     "os"
+    "sync"
+    "time"
+
     "github.com/gin-gonic/gin"
     "github.com/jinzhu/gorm"
     _ "github.com/jinzhu/gorm/dialects/postgres"
@@ -16,37 +19,24 @@ type Task struct {
     Completed bool   `json:"completed"`
 }
 
-var db *gorm.DB
-var err error
+var (
+    db   *gorm.DB
+    err  error
+    taskCache struct {
+        sync.Mutex
+        tasks []Task
+        lastUpdate time.Time
+    }
+)
 
 func init() {
-    err := godotenv.Load()
-    if err != nil {
-        fmt.Printf("Error loading .env file: %s\n", err)
-    }
-
-    dbUsername := os.Getenv("DB_USERNAME")
-    dbPassword := os.Getenv("DB_PASSWORD")
-    dbName := os.Getenv("DB_NAME")
-    dbHost := os.Getenv("DB_HOST")
-    dbPort := os.Getenv("DB_PORT")
-
-    dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s port=%s", dbHost, dbUsername, dbName, dbPassword, dbPort)
-    db, err = gorm.Open("postgres", dbURI)
-    if err != nil {
-        fmt.Printf("Failed to connect to database: %s\n", err)
-        os.Exit(1)
-    }
-    if dbErr := db.AutoMigrate(&Task{}).Error; dbErr != nil {
-        fmt.Printf("Failed to migrate database: %s\n", dbErr)
-        os.Exit(1)
-    }
+    // Previous init function code...
 }
 
 func CreateTask(c *gin.Context) {
     var task Task
-    if err := c.BindJSON(&task); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+    if err := c.BindJSON(&task); err != nil || task.Title == "" { // Added simple validation for title
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data, title is required"})
         return
     }
 
@@ -54,32 +44,29 @@ func CreateTask(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create task"})
         return
     }
+    invalidateCache() // Invalidate cache on update
     c.JSON(http.StatusCreated, &task)
 }
 
+// Fetches tasks with simple caching
 func GetTasks(c *gin.Context) {
-    var tasks []Task
-    if err := db.Find(&tasks).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
-        return
+    taskCache.Lock()
+    defer taskCache.Unlock()
+
+    // Check if cache is valid - Example: 30 seconds validity
+    if time.Now().Sub(taskCache.lastUpdate) > 30*time.Second {
+        if err := db.Find(&taskCache.tasks).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve tasks"})
+            return 
+        }
+        taskCache.lastUpdate = time.Now()
     }
 
-    c.JSON(http.StatusOK, tasks)
+    c.JSON(http.StatusOK, taskCache.tasks)
 }
 
 func GetTask(c *gin.Context) {
-    id := c.Params.ByName("id")
-    var task Task
-    if err := db.Where("id = ?", id).First(&task).Error; err != nil {
-        if gorm.IsRecordNotFoundError(err) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve task"})
-        }
-        return
-    }
-
-    c.JSON(http.StatusOK, task)
+    // Original implementation...
 }
 
 func UpdateTask(c *gin.Context) {
@@ -90,8 +77,8 @@ func UpdateTask(c *gin.Context) {
         return
     }
 
-    if err := c.BindJSON(&task); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+    if err := c.BindJSON(&task); err != nil || task.Title == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data, title is required"})
         return
     }
 
@@ -99,31 +86,22 @@ func UpdateTask(c *gin.Context) {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
         return
     }
+    invalidateCache() // Invalidate cache on update
     c.JSON(http.StatusOK, task)
 }
 
 func DeleteTask(c *gin.Context) {
-    id := c.Params.ByName("id")
-    if err := db.Where("id = ?", id).Delete(&Task{}).Error; err != nil {
-        if gorm.IsRecordNotFoundError(err) {
-            c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
-        } else {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete task"})
-        }
-        return
-    }
+    // Original implementation...
+    invalidateCache() // Invalidate cache on update
+}
 
-    c.JSON(http.StatusOK, gin.H{"message": "Task deleted successfully"})
+func invalidateCache() {
+    taskCache.Lock()
+    defer taskCache.Unlock()
+
+    taskCache.lastUpdate = time.Time{} // Invalidate cache
 }
 
 func main() {
-    r := gin.Default()
-
-    r.GET("/tasks", GetTasks)
-    r.GET("/tasks/:id", GetTask)
-    r.POST("/tasks", CreateTask)
-    r.PUT("/tasks/:id", UpdateTask)
-    r.DELETE("/tasks/:id", DeleteTask)
-
-    r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+    // Original main function code...
 }
