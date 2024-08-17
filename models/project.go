@@ -13,30 +13,38 @@ type Task struct {
 	gorm.Model
 	Title       string
 	Description string
-	ProjectRef  uint // Renamed from ProjectID for clarity that this is a reference ID to Project
+	ProjectRef  uint
 }
 
 type Project struct {
 	gorm.Model
 	Name        string
 	Description string
-	Tasks       []Task `gorm:"foreignKey:ProjectRef"` // Updated to match the renamed field in Task
+	Tasks       []Task `gorm:"foreignKey:ProjectRef"`
 }
 
 func init() {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
-		log.Fatalf("Error loading .env file")
+		log.Fatalf("Error loading .env file: %v", err)
 	}
 }
 
 func main() {
-	databaseURL := os.Getenv("DATABASE_URL") // Renamed from dsn for clarity
-	database, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{}) // Renamed db to database for explicitness
+	databaseURL := os.Getenv("DATABASE_URL")
+	database, err := connectToDatabase(databaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	if err := database.AutoMigrate(&Project{}, &Task{}); err != nil { // Explicit error handling for AutoMigrate
+	if err := autoMigrateDatabase(database); err != nil {
 		log.Fatalf("Failed to auto-migrate database schemas: %v", err)
 	}
+}
+
+func connectToDatabase(databaseURL string) (*gorm.DB, error) {
+	return gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
+}
+
+func autoMigrateDatabase(database *gorm.DB) error {
+	return database.AutoMigrate(&Project{}, &Task{})
 }
