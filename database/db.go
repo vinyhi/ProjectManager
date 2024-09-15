@@ -18,7 +18,7 @@ func init() {
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		log.Println("Error loading .env file, continuing with system environment variables")
 	}
 
 	// Define PostgreSQL connection string
@@ -26,17 +26,26 @@ func init() {
 		os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
 
 	// Connect to PostgreSQL using GORM
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+	var errConnect error
+	db, errConnect = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if errConnect != nil {
+		log.Fatalf("Failed to connect to database: %v", errConnect)
 	}
 
-	// Migrate the schema
-	db.AutoMigrate(&models.Project{}, &models.Task{})
+	// Migrate the schema and check for migration error
+	errMigration := db.AutoMigrate(&models.Project{}, &models.Task{})
+	if errMigration != nil {
+		log.Printf("Failed to auto-migrate database schema: %v", errMigration)
+		// Optionally, handle migration errors differently e.g., by not halting the application.
+	}
 }
 
 // GetDB exports the database connection
 func GetDB() *gorm.DB {
+	if db == nil {
+		log.Println("Database connection has not been established.")
+		// Initialize or reconnect logic can go here
+	}
 	return db
 }
 
@@ -44,5 +53,11 @@ func main() {
 	// Example usage
 	db := GetDB()
 
-	// Work with the database, e.g., querying, etc.
+	// Confirm the db is not nil before proceeding to prevent panic
+	if db == nil {
+		log.Println("Failed to get database connection")
+		return
+	}
+
+	// Work with the database, e.g., querying, inserting, updating, etc.
 }
