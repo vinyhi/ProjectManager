@@ -15,6 +15,7 @@ html, body {
     max-width: 1100px;
     margin: auto;
     padding: 0 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 header {
@@ -23,6 +24,7 @@ header {
     padding-top: 30px;
     min-height: 70px;
     border-bottom: #0779e4 3px solid;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 header h1 {
@@ -34,12 +36,15 @@ header h1 {
     background: #fff;
     padding: 20px;
     border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #project-form label,
 #task-form label {
     display: block;
     margin-bottom: 10px;
+    font-weight: bold;
+    color: #333;
 }
 
 #project-form input[type='text'],
@@ -47,6 +52,8 @@ header h1 {
     width: 100%;
     padding: 10px;
     margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }
 
 #project-list {
@@ -58,6 +65,8 @@ header h1 {
     padding: 10px;
     border-radius: 5px;
     margin-bottom: 10px;
+    border-left: 5px solid #0779e4;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #task-form {
@@ -65,6 +74,7 @@ header h1 {
     background: #fff;
     padding: 20px;
     border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 #task-list {
@@ -77,6 +87,22 @@ header h1 {
     border-radius: 5px;
     margin-bottom: 10px;
     list-style-type: none;
+    border-left: 5px solid #ff6347;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button {
+    background-color: #0779e4;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #045a9d;
 }
 
 @media (max-width: 768px) {
