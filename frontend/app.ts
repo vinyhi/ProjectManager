@@ -13,42 +13,47 @@ interface Task {
   projectId: number;
 }
 
-const fetchProjects = async (): Promise<Project[]> => {
-  const response = await axios.get(`${API_BASE_URL}/projects`);
+const makeApiCall = async <T>(method: "get" | "post" | "put" | "delete", url: string, data?: Project | Task): Promise<T> => {
+  const config = {
+    method,
+    url: `${API_BASE_URL}${url}`,
+    data,
+  };
+  
+  const response = await axios(config);
   return response.data;
+};
+
+const fetchProjects = async (): Promise<Project[]> => {
+  return makeApiCall<Project[]>('get', '/projects');
 };
 
 const fetchTasks = async (projectId: number): Promise<Task[]> => {
-  const response = await axios.get(`${API_BASE_URL}/projects/${projectId}/tasks`);
-  return response.data;
+  return makeApiCall<Task[]>('get', `/projects/${projectId}/tasks`);
 };
 
 const createProject = async (project: Project): Promise<Project> => {
-  const response = await axios.post(`${API_BASE_URL}/projects`, project);
-  return response.data;
+  return makeApiCall<Project>('post', '/projects', project);
 };
 
 const updateProject = async (project: Project): Promise<Project> => {
-  const response = await axios.put(`${API_BASE_URL}/projects/${project.id}`, project);
-  return response.data;
+  return makeApiCall<Project>('put', `/projects/${project.id}`, project);
 };
 
 const deleteProject = async (id: number): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/projects/${id}`);
+  await makeApiCall<void>('delete', `/projects/${id}`);
 };
 
 const createTask = async (task: Task): Promise<Task> => {
-  const response = await axios.post(`${API_BASE_URL}/tasks`, task);
-  return response.data;
+  return makeApiCall<Task>('post', '/tasks', task);
 };
 
 const updateTask = async (task: Task): Promise<Task> => {
-  const response = await axios.put(`${API_BASE_URL}/tasks/${task.id}`, task);
-  return response.data;
+  return makeApiCall<Task>('put', `/tasks/${task.id}`, task);
 };
 
 const deleteTask = async (id: number): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/tasks/${id}`);
+  await makeApiCall<void>('delete', `/tasks/${id}`);
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -60,8 +65,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-document.getElementById("create-project").addEventListener("click", async () => {
-  const projectName = (document.getElementById("project-name") as HTMLInputElement).value;
+document.getElementById("create-project")?.addEventListener("click", async () => {
+  const projectNameElement = document.getElementById("project-name") as HTMLInputElement;
+  if (!projectNameElement) return;
+  const projectName = projectNameElement.value;
   try {
     const newProject = await createProject({ name: projectName });
     console.log(newProject);
